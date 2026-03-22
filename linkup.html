@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkUp — Let's hang.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: rgba(255,255,255,0.07);
+    --accent: #c8f135;
+    --accent-dim: rgba(200,241,53,0.12);
+    --accent-mid: rgba(200,241,53,0.3);
+    --text: #f0f0ee;
+    --muted: #6b6b78;
+    --danger: #ff5555;
+    --danger-dim: rgba(255,85,85,0.12);
+    --success: #55ffb0;
+    --success-dim: rgba(85,255,176,0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* Glow blob */
+  .glow-blob {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(200,241,53,0.06) 0%, transparent 70%);
+    top: -200px;
+    right: -200px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── SCREEN SYSTEM ─── */
+  .screen {
+    display: none;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ─── HEADER ─── */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+  }
+  .logo span { color: var(--text); }
+  .back-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .back-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+  /* ─── HOME SCREEN ─── */
+  #home {
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+  }
+  .home-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent-mid);
+    border-radius: 50px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 28px;
+    letter-spacing: 0.5px;
+  }
+  .home-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(42px, 10vw, 72px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -2px;
+    margin-bottom: 16px;
+  }
+  .home-title .accent { color: var(--accent); }
+  .home-sub {
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 300;
+    max-width: 300px;
+    margin: 0 auto 48px;
+    line-height: 1.6;
+  }
+  .home-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
+
+  /* ─── BUTTONS ─── */
+  .btn-primary {
+    background: var(--accent);
+    color: #0d0d0f;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 16px 24px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.2px;
+  }
+  .btn-primary:hover { background: #d4f54a; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(200,241,53,0.25); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    padding: 15px 24px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: rgba(255,255,255,0.15); background: #22222a; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .btn-ghost:hover { color: var(--text); }
+
+  .btn-danger {
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 1px solid rgba(255,85,85,0.2);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-success {
+    background: var(--success-dim);
+    color: var(--success);
+    border: 1px solid rgba(85,255,176,0.2);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-success:hover { background: rgba(85,255,176,0.2); }
+  .btn-danger:hover { background: rgba(255,85,85,0.2); }
+
+  /* ─── FORMS ─── */
+  .screen-inner {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .screen-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+  .screen-subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+    font-weight: 300;
+  }
+
+  .field { margin-bottom: 20px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .field input, .field textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 14px 16px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent-mid); }
+  .field input::placeholder, .field textarea::placeholder { color: var(--muted); }
+  .field textarea { resize: none; min-height: 80px; line-height: 1.5; }
+
+  /* ─── TIME SLOTS ─── */
+  .slots-section { margin-bottom: 28px; }
+  .slots-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .slots-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .add-slot-btn {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--accent-mid);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .add-slot-btn:hover { background: rgba(200,241,53,0.2); }
+
+  .slot-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .slot-item input[type="datetime-local"] {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    color-scheme: dark;
+    padding: 0;
+  }
+  .remove-slot {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.2s;
+  }
+  .remove-slot:hover { color: var(--danger); }
+
+  /* ─── INVITE CARD (recipient view) ─── */
+  .invite-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .invite-from {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .invite-host {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+  .invite-host .accent { color: var(--accent); }
+
+  .invite-detail {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .invite-detail-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--surface2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .invite-detail-text { flex: 1; }
+  .invite-detail-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .invite-detail-value { font-size: 14px; font-weight: 500; }
+
+  /* ─── SLOT PICKER (for invitee) ─── */
+  .slot-choice {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .slot-choice:hover { border-color: var(--accent-mid); background: var(--surface2); }
+  .slot-choice.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .slot-radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .slot-choice.selected .slot-radio {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+  .slot-choice.selected .slot-radio::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0d0d0f;
+  }
+  .slot-time { font-size: 15px; font-weight: 500; }
+  .slot-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ─── RESPONSE ACTIONS ─── */
+  .response-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .response-name-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 14px 16px;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 4px;
+  }
+  .response-name-input:focus { border-color: var(--accent-mid); }
+  .response-name-input::placeholder { color: var(--muted); }
+
+  /* ─── HOST DASHBOARD ─── */
+  .dashboard-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+  }
+  .event-title-display {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .event-meta { font-size: 13px; color: var(--muted); }
+
+  .responses-list { padding: 20px 24px; }
+  .responses-title {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .response-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    animation: slideIn 0.3s ease;
+  }
+  .response-card-left { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .avatar.accepted { background: var(--success-dim); color: var(--success); }
+  .avatar.declined { background: var(--danger-dim); color: var(--danger); }
+  .avatar.countered { background: var(--accent-dim); color: var(--accent); }
+  .avatar.pending { background: var(--surface2); color: var(--muted); }
+
+  .response-name { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .response-status { font-size: 12px; color: var(--muted); }
+  .response-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 50px;
+    letter-spacing: 0.3px;
+  }
+  .badge-accepted { background: var(--success-dim); color: var(--success); }
+  .badge-declined { background: var(--danger-dim); color: var(--danger); }
+  .badge-countered { background: var(--accent-dim); color: var(--accent); }
+  .badge-pending { background: var(--surface2); color: var(--muted); }
+
+  /* ─── SLOT TALLY ─── */
+  .slot-tally {
+    padding: 20px 24px 0;
+  }
+  .tally-title {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .tally-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tally-item:hover { border-color: var(--accent-mid); }
+  .tally-item.winner { border-color: var(--accent); background: var(--accent-dim); }
+  .tally-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .tally-time { font-size: 14px; font-weight: 500; }
+  .tally-count { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .tally-bar-bg {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .tally-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+  .tally-names { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* ─── SHARE PANEL ─── */
+  .share-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+    margin: 0 24px 24px;
+  }
+  .share-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .share-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .share-link-box {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .share-link-text {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: monospace;
+  }
+  .copy-btn {
+    background: var(--accent);
+    color: #0d0d0f;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: #d4f54a; }
+  .share-messengers {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .messenger-btn {
+    flex: 1;
+    min-width: 90px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .messenger-btn:hover { border-color: rgba(255,255,255,0.15); background: #22222a; }
+
+  /* ─── CONFIRM SCREEN ─── */
+  .confirm-screen {
+    padding: 40px 24px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .confirm-icon {
+    font-size: 56px;
+    margin-bottom: 20px;
+    animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes pop {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .confirm-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .confirm-sub { font-size: 15px; color: var(--muted); margin-bottom: 32px; line-height: 1.5; }
+
+  .gcal-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #fff;
+    color: #1a1a1a;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 14px 24px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    margin-bottom: 10px;
+    width: 100%;
+    max-width: 300px;
+  }
+  .gcal-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,255,255,0.15); }
+  .gcal-icon { font-size: 18px; }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--text);
+    color: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px 20px;
+    border-radius: 50px;
+    z-index: 10000;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 24px 0;
+  }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    text-align: center;
+    padding: 40px 24px;
+    color: var(--muted);
+  }
+  .empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state-text { font-size: 14px; line-height: 1.6; }
+
+  /* ─── CONFIRM SLOT MODAL OVERLAY ─── */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .overlay.active { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px 24px 0 0;
+    padding: 28px 24px 40px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+
+  /* ─── MAX WIDTH CENTERING ─── */
+  .max-w { max-width: 480px; margin: 0 auto; width: 100%; }
+
+  /* Footer spacer */
+  .spacer { height: 40px; }
+</style>
+</head>
+<body>
+
+<div class="glow-blob"></div>
+<div id="toast" class="toast"></div>
+
+<!-- ════════════ SCREEN: HOME ════════════ -->
+<div id="home" class="screen active">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;">
+    <div class="home-badge">✦ No group chats needed</div>
+    <h1 class="home-title">Link<span class="accent">Up.</span></h1>
+    <p class="home-sub">Send a hangout invite. Friends pick a time. Done.</p>
+    <div class="home-actions">
+      <button class="btn-primary" onclick="goTo('create')">🎉 Create a Hangout</button>
+      <button class="btn-secondary" onclick="goTo('invitee-demo')">👀 See what friends see</button>
+    </div>
+  </div>
+  <p style="text-align:center;font-size:12px;color:var(--muted);padding:20px;">Works in any messenger. No app download needed.</p>
+</div>
+
+<!-- ════════════ SCREEN: CREATE HANGOUT ════════════ -->
+<div id="create" class="screen">
+  <div class="app-header max-w" style="margin:0 auto;width:100%;">
+    <div class="logo">Link<span>Up</span></div>
+    <button class="back-btn" onclick="goTo('home')">← Back</button>
+  </div>
+  <div class="screen-inner max-w" style="margin:0 auto;">
+    <div class="screen-title">Plan a hangout</div>
+    <p class="screen-subtitle">Fill in the details, then share the link.</p>
+
+    <div class="field">
+      <label>What's the hangout? 🎯</label>
+      <input type="text" id="event-name" placeholder="e.g. Coffee with the gang" maxlength="60">
+    </div>
+
+    <div class="field">
+      <label>Where? 📍</label>
+      <input type="text" id="event-place" placeholder="e.g. Starbucks BGC, or your place">
+    </div>
+
+    <div class="field">
+      <label>Your name</label>
+      <input type="text" id="host-name" placeholder="So friends know who's inviting">
+    </div>
+
+    <div class="field">
+      <label>Note (optional)</label>
+      <textarea id="event-note" placeholder="Anything else they should know…"></textarea>
+    </div>
+
+    <div class="slots-section">
+      <div class="slots-header">
+        <span class="slots-label">Time options ⏰</span>
+        <button class="add-slot-btn" onclick="addSlot()">+ Add time</button>
+      </div>
+      <div id="slots-container"></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">Give friends 2–3 options to pick from.</p>
+    </div>
+
+    <button class="btn-primary" style="width:100%;" onclick="createEvent()">Generate invite link →</button>
+    <div class="spacer"></div>
+  </div>
+</div>
+
+<!-- ════════════ SCREEN: SHARE (HOST) ════════════ -->
+<div id="share" class="screen">
+  <div class="app-header max-w" style="margin:0 auto;width:100%;">
+    <div class="logo">Link<span>Up</span></div>
+    <button class="back-btn" onclick="goTo('dashboard')">See responses</button>
+  </div>
+  <div class="screen-inner max-w" style="margin:0 auto;">
+    <div style="text-align:center;padding:20px 0 28px;">
+      <div style="font-size:48px;margin-bottom:12px;">🔗</div>
+      <div class="screen-title">Your invite is ready!</div>
+      <p class="screen-subtitle">Share this link — friends can respond without signing up.</p>
+    </div>
+
+    <div class="share-panel" style="margin:0 0 20px;">
+      <div class="share-title">Copy the link</div>
+      <p class="share-sub">Paste it in any chat.</p>
+      <div class="share-link-box">
+        <div class="share-link-text" id="share-link-display"></div>
+        <button class="copy-btn" onclick="copyLink()">Copy</button>
+      </div>
+      <div class="share-messengers">
+        <button class="messenger-btn" onclick="shareVia('whatsapp')">💬 WhatsApp</button>
+        <button class="messenger-btn" onclick="shareVia('messenger')">💙 Messenger</button>
+        <button class="messenger-btn" onclick="shareVia('sms')">📱 SMS</button>
+        <button class="messenger-btn" onclick="shareVia('native')">⋯ More</button>
+      </div>
+    </div>
+
+    <button class="btn-secondary" style="width:100%;" onclick="goTo('dashboard')">View responses dashboard →</button>
+    <div class="spacer"></div>
+  </div>
+</div>
+
+<!-- ════════════ SCREEN: HOST DASHBOARD ════════════ -->
+<div id="dashboard" class="screen">
+  <div class="app-header max-w" style="margin:0 auto;width:100%;">
+    <div class="logo">Link<span>Up</span></div>
+    <button class="back-btn" onclick="goTo('share')">Share again</button>
+  </div>
+  <div class="max-w" style="margin:0 auto;flex:1;overflow-y:auto;">
+    <div class="dashboard-header">
+      <div class="event-title-display" id="dash-title">—</div>
+      <div class="event-meta" id="dash-meta">—</div>
+    </div>
+
+    <!-- Slot tally -->
+    <div class="slot-tally">
+      <div class="tally-title">Which time works best</div>
+      <div id="tally-container"></div>
+    </div>
+
+    <div class="divider" style="margin:20px 24px;"></div>
+
+    <!-- Responses -->
+    <div class="responses-list">
+      <div class="responses-title">Responses</div>
+      <div id="responses-container">
+        <div class="empty-state">
+          <div class="empty-state-icon">👀</div>
+          <div class="empty-state-text">Waiting for your friends to respond…<br>Share the link to get started.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:0 24px 40px;">
+      <button class="btn-primary" style="width:100%;" id="confirm-btn" onclick="openConfirmModal()">✓ Confirm a time</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ SCREEN: INVITEE VIEW ════════════ -->
+<div id="invitee" class="screen">
+  <div class="app-header max-w" style="margin:0 auto;width:100%;">
+    <div class="logo">Link<span>Up</span></div>
+    <div style="font-size:13px;color:var(--muted);">Invite</div>
+  </div>
+  <div class="screen-inner max-w" style="margin:0 auto;">
+    <div class="invite-card">
+      <div class="invite-from">You're invited by</div>
+      <div class="invite-host"><span id="inv-host" class="accent">—</span> wants to hang</div>
+
+      <div class="invite-detail">
+        <div class="invite-detail-icon">🎯</div>
+        <div class="invite-detail-text">
+          <div class="invite-detail-label">Hangout</div>
+          <div class="invite-detail-value" id="inv-name">—</div>
+        </div>
+      </div>
+      <div class="invite-detail">
+        <div class="invite-detail-icon">📍</div>
+        <div class="invite-detail-text">
+          <div class="invite-detail-label">Place</div>
+          <div class="invite-detail-value" id="inv-place">—</div>
+        </div>
+      </div>
+      <div class="invite-detail" id="inv-note-wrap" style="display:none;">
+        <div class="invite-detail-icon">💬</div>
+        <div class="invite-detail-text">
+          <div class="invite-detail-label">Note</div>
+          <div class="invite-detail-value" id="inv-note">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-title" style="font-size:18px;margin-bottom:4px;">Pick a time that works</div>
+    <p class="screen-subtitle">Choose one, or decline below.</p>
+
+    <div id="inv-slots"></div>
+
+    <div class="response-actions">
+      <input type="text" class="response-name-input" id="inv-name-input" placeholder="Your name">
+      <button class="btn-success" onclick="respondInvite('accepted')">✓ I'm in!</button>
+      <button class="btn-danger" onclick="respondInvite('declined')">✗ Can't make it</button>
+    </div>
+    <div class="spacer"></div>
+  </div>
+</div>
+
+<!-- ════════════ SCREEN: INVITEE DEMO ════════════ -->
+<div id="invitee-demo" class="screen">
+  <!-- Populated dynamically same as invitee but with demo data -->
+</div>
+
+<!-- ════════════ SCREEN: RESPONSE CONFIRMATION ════════════ -->
+<div id="responded" class="screen">
+  <div class="app-header max-w" style="margin:0 auto;width:100%;">
+    <div class="logo">Link<span>Up</span></div>
+  </div>
+  <div class="confirm-screen max-w" style="margin:0 auto;">
+    <div class="confirm-icon" id="resp-icon">✅</div>
+    <div class="confirm-title" id="resp-title">You're in!</div>
+    <p class="confirm-sub" id="resp-sub">Your response has been sent. You'll hear back once the host confirms a time.</p>
+    <a class="gcal-btn" id="gcal-link" href="#" target="_blank">
+      <span class="gcal-icon">📅</span> Add to Google Calendar
+    </a>
+    <button class="btn-ghost" onclick="goTo('home')">Back to home</button>
+  </div>
+</div>
+
+<!-- ════════════ SCREEN: HOST CONFIRMED ════════════ -->
+<div id="host-confirmed" class="screen">
+  <div class="app-header max-w" style="margin:0 auto;width:100%;">
+    <div class="logo">Link<span>Up</span></div>
+  </div>
+  <div class="confirm-screen max-w" style="margin:0 auto;">
+    <div class="confirm-icon">🎉</div>
+    <div class="confirm-title">It's locked in!</div>
+    <p class="confirm-sub" id="hc-sub">Everyone's been notified. Time to actually show up.</p>
+    <a class="gcal-btn" id="hc-gcal-link" href="#" target="_blank">
+      <span class="gcal-icon">📅</span> Add to Google Calendar
+    </a>
+    <button class="btn-ghost" onclick="goTo('home')">Create another hangout</button>
+  </div>
+</div>
+
+<!-- ════════════ CONFIRM SLOT MODAL ════════════ -->
+<div id="confirm-overlay" class="overlay" onclick="closeConfirmModal(event)">
+  <div class="modal max-w">
+    <div class="modal-title">Lock in a time</div>
+    <p class="modal-sub">Pick the slot to confirm for everyone.</p>
+    <div id="modal-slots"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="confirmSlot()">🎉 Confirm this time!</button>
+      <button class="btn-ghost" onclick="closeConfirmModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let state = {
+  event: null,       // { id, name, place, note, host, slots:[], responses:[] }
+  selectedSlot: null // index for confirm modal
+};
+
+// ═══════════════════════════════════════════════
+//  ROUTING
+// ═══════════════════════════════════════════════
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(screenId);
+  if (el) el.classList.add('active');
+  window.scrollTo(0, 0);
+
+  if (screenId === 'dashboard') renderDashboard();
+  if (screenId === 'invitee-demo') renderDemoInvite();
+  if (screenId === 'create') initSlots();
+}
+
+// ═══════════════════════════════════════════════
+//  SLOT BUILDER
+// ═══════════════════════════════════════════════
+let slotCount = 0;
+
+function initSlots() {
+  const c = document.getElementById('slots-container');
+  if (c && c.children.length === 0) addSlot();
+}
+
+function addSlot() {
+  const c = document.getElementById('slots-container');
+  if (c.children.length >= 5) { showToast('Max 5 time options'); return; }
+  slotCount++;
+  const id = 'slot-' + slotCount;
+  const div = document.createElement('div');
+  div.className = 'slot-item';
+  div.id = id;
+
+  // Default to tomorrow at noon
+  const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(12, 0, 0, 0);
+  const val = d.toISOString().slice(0, 16);
+
+  div.innerHTML = `
+    <span style="font-size:18px;">🕐</span>
+    <input type="datetime-local" value="${val}" min="${new Date().toISOString().slice(0,16)}">
+    <button class="remove-slot" onclick="removeSlot('${id}')">×</button>
+  `;
+  c.appendChild(div);
+}
+
+function removeSlot(id) {
+  const el = document.getElementById(id);
+  if (document.getElementById('slots-container').children.length <= 1) {
+    showToast('Need at least one time slot');
+    return;
+  }
+  if (el) el.remove();
+}
+
+// ═══════════════════════════════════════════════
+//  CREATE EVENT
+// ═══════════════════════════════════════════════
+function createEvent() {
+  const name = document.getElementById('event-name').value.trim();
+  const place = document.getElementById('event-place').value.trim();
+  const host = document.getElementById('host-name').value.trim();
+  const note = document.getElementById('event-note').value.trim();
+
+  if (!name) { showToast('What's the hangout called?'); return; }
+  if (!place) { showToast('Where are you meeting?'); return; }
+  if (!host) { showToast('What's your name?'); return; }
+
+  const slotInputs = document.querySelectorAll('#slots-container input[type="datetime-local"]');
+  const slots = [];
+  slotInputs.forEach(inp => { if (inp.value) slots.push(inp.value); });
+  if (slots.length === 0) { showToast('Add at least one time option'); return; }
+
+  state.event = {
+    id: Math.random().toString(36).slice(2, 8).toUpperCase(),
+    name, place, host, note, slots,
+    responses: []
+  };
+
+  // Build fake shareable URL
+  const baseUrl = window.location.href.split('?')[0].split('#')[0];
+  state.shareUrl = baseUrl + '?event=' + btoa(JSON.stringify(state.event));
+
+  document.getElementById('share-link-display').textContent = state.shareUrl;
+  goTo('share');
+}
+
+// ═══════════════════════════════════════════════
+//  SHARE
+// ═══════════════════════════════════════════════
+function copyLink() {
+  navigator.clipboard.writeText(state.shareUrl).then(() => showToast('Link copied!')).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = state.shareUrl;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Link copied!');
+  });
+}
+
+function shareVia(platform) {
+  const text = `Hey! ${state.event.host} is planning "${state.event.name}" — pick a time that works for you 👇`;
+  const url = state.shareUrl;
+  let shareUrl;
+  if (platform === 'whatsapp') shareUrl = `https://wa.me/?text=${encodeURIComponent(text + '\n' + url)}`;
+  else if (platform === 'messenger') shareUrl = `fb-messenger://share?link=${encodeURIComponent(url)}`;
+  else if (platform === 'sms') shareUrl = `sms:?body=${encodeURIComponent(text + '\n' + url)}`;
+  else if (platform === 'native') {
+    if (navigator.share) { navigator.share({ title: state.event.name, text, url }); return; }
+    else { showToast('Share not supported — copy the link!'); return; }
+  }
+  window.open(shareUrl, '_blank');
+}
+
+// ═══════════════════════════════════════════════
+//  INVITEE VIEW (parse URL or demo)
+// ═══════════════════════════════════════════════
+function renderInviteScreen(event, screenId) {
+  const screen = document.getElementById(screenId);
+  if (!screen) return;
+
+  // Reuse invitee HTML structure for demo
+  if (screenId === 'invitee-demo') {
+    screen.innerHTML = `
+      <div class="app-header max-w" style="margin:0 auto;width:100%;">
+        <div class="logo">Link<span>Up</span></div>
+        <button class="back-btn" onclick="goTo('home')">← Back</button>
+      </div>
+      <div class="screen-inner max-w" style="margin:0 auto;">
+        <div style="background:var(--accent-dim);border:1px solid var(--accent-mid);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--accent);margin-bottom:20px;">
+          👆 This is what your friends see when they open the link
+        </div>
+        <div class="invite-card">
+          <div class="invite-from">You're invited by</div>
+          <div class="invite-host"><span style="color:var(--accent);">${event.host}</span> wants to hang</div>
+          <div class="invite-detail">
+            <div class="invite-detail-icon">🎯</div>
+            <div class="invite-detail-text">
+              <div class="invite-detail-label">Hangout</div>
+              <div class="invite-detail-value">${event.name}</div>
+            </div>
+          </div>
+          <div class="invite-detail">
+            <div class="invite-detail-icon">📍</div>
+            <div class="invite-detail-text">
+              <div class="invite-detail-label">Place</div>
+              <div class="invite-detail-value">${event.place}</div>
+            </div>
+          </div>
+          ${event.note ? `<div class="invite-detail">
+            <div class="invite-detail-icon">💬</div>
+            <div class="invite-detail-text">
+              <div class="invite-detail-label">Note</div>
+              <div class="invite-detail-value">${event.note}</div>
+            </div>
+          </div>` : ''}
+        </div>
+        <div class="screen-title" style="font-size:18px;margin-bottom:4px;">Pick a time that works</div>
+        <p class="screen-subtitle">Choose one, or decline below.</p>
+        <div id="demo-slots"></div>
+        <div class="response-actions">
+          <input type="text" class="response-name-input" id="demo-name-input" placeholder="Your name">
+          <button class="btn-success" onclick="respondDemo('accepted')">✓ I'm in!</button>
+          <button class="btn-danger" onclick="respondDemo('declined')">✗ Can't make it</button>
+        </div>
+        <div class="spacer"></div>
+      </div>
+    `;
+    renderSlotChoices('demo-slots', event.slots, 'demo');
+  }
+}
+
+function renderDemoInvite() {
+  const demo = {
+    host: 'Martin',
+    name: 'Friday night drinks 🍻',
+    place: 'The Collective, BGC',
+    note: 'Dress code: come as you are',
+    slots: [
+      new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16),
+      new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16),
+      new Date(Date.now() + 86400000 * 4).toISOString().slice(0, 16)
+    ]
+  };
+  renderInviteScreen(demo, 'invitee-demo');
+}
+
+let demoSelectedSlot = null;
+
+function renderSlotChoices(containerId, slots, mode) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = '';
+  slots.forEach((slot, i) => {
+    const dt = new Date(slot);
+    const div = document.createElement('div');
+    div.className = 'slot-choice';
+    div.id = `${mode}-slot-${i}`;
+    div.innerHTML = `
+      <div class="slot-radio"></div>
+      <div>
+        <div class="slot-time">${formatTime(dt)}</div>
+        <div class="slot-date">${formatDate(dt)}</div>
+      </div>
+    `;
+    div.onclick = () => selectSlotChoice(i, mode, slots.length);
+    c.appendChild(div);
+  });
+}
+
+function selectSlotChoice(idx, mode, total) {
+  for (let i = 0; i < total; i++) {
+    const el = document.getElementById(`${mode}-slot-${i}`);
+    if (el) el.classList.toggle('selected', i === idx);
+  }
+  if (mode === 'demo') demoSelectedSlot = idx;
+  else if (mode === 'inv') state.inviteSelectedSlot = idx;
+  else if (mode === 'modal') state.selectedSlot = idx;
+}
+
+function respondDemo(type) {
+  const name = document.getElementById('demo-name-input').value.trim();
+  if (!name) { showToast('Enter your name first'); return; }
+  if (type === 'accepted' && demoSelectedSlot === null) { showToast('Pick a time first'); return; }
+  showToast(type === 'accepted' ? "Demo: You're in! 🎉" : "Demo: You declined.");
+}
+
+// ═══════════════════════════════════════════════
+//  INVITEE RESPOND (real)
+// ═══════════════════════════════════════════════
+function respondInvite(type) {
+  const name = document.getElementById('inv-name-input').value.trim();
+  if (!name) { showToast('Enter your name first'); return; }
+  if (type === 'accepted' && state.inviteSelectedSlot == null) { showToast('Pick a time slot first'); return; }
+
+  const response = {
+    name,
+    type,
+    slot: type === 'accepted' ? state.event.slots[state.inviteSelectedSlot] : null,
+    slotIdx: type === 'accepted' ? state.inviteSelectedSlot : null
+  };
+
+  if (!state.event) state.event = { responses: [], slots: [] };
+  state.event.responses.push(response);
+
+  // Update response screen
+  document.getElementById('resp-icon').textContent = type === 'accepted' ? '🎉' : '😢';
+  document.getElementById('resp-title').textContent = type === 'accepted' ? "You're in!" : "Got it!";
+  document.getElementById('resp-sub').textContent = type === 'accepted'
+    ? `Noted, ${name}! The host will confirm a final time. You can add it to your calendar now.`
+    : `Thanks for letting them know, ${name}.`;
+
+  if (type === 'accepted' && response.slot) {
+    document.getElementById('gcal-link').href = buildGCalUrl(state.event, response.slot);
+  } else {
+    document.getElementById('gcal-link').style.display = 'none';
+  }
+
+  goTo('responded');
+}
+
+// ═══════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════
+function renderDashboard() {
+  if (!state.event) return;
+  const ev = state.event;
+
+  document.getElementById('dash-title').textContent = ev.name;
+  document.getElementById('dash-meta').textContent = `📍 ${ev.place} · Hosted by ${ev.host}`;
+
+  // Tally
+  const tally = ev.slots.map((s, i) => ({
+    slot: s,
+    idx: i,
+    count: ev.responses.filter(r => r.type === 'accepted' && r.slotIdx === i).length,
+    names: ev.responses.filter(r => r.type === 'accepted' && r.slotIdx === i).map(r => r.name)
+  }));
+  const maxCount = Math.max(...tally.map(t => t.count), 1);
+
+  const tallyC = document.getElementById('tally-container');
+  if (ev.slots.length === 0) {
+    tallyC.innerHTML = '<p style="color:var(--muted);font-size:13px;">No slots defined.</p>';
+  } else {
+    tallyC.innerHTML = tally.map(t => `
+      <div class="tally-item ${t.count === maxCount && t.count > 0 ? 'winner' : ''}" onclick="selectSlotChoice(${t.idx},'modal',${ev.slots.length})">
+        <div class="tally-item-top">
+          <div>
+            <div class="tally-time">${formatTime(new Date(t.slot))} · ${formatDate(new Date(t.slot))}</div>
+          </div>
+          <div class="tally-count">${t.count} vote${t.count !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="tally-bar-bg">
+          <div class="tally-bar-fill" style="width:${maxCount > 0 ? (t.count / maxCount) * 100 : 0}%"></div>
+        </div>
+        ${t.names.length > 0 ? `<div class="tally-names">${t.names.join(', ')}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // Responses
+  const respC = document.getElementById('responses-container');
+  if (ev.responses.length === 0) {
+    respC.innerHTML = `<div class="empty-state"><div class="empty-state-icon">👀</div><div class="empty-state-text">Waiting for your friends to respond…<br>Share the link to get started.</div></div>`;
+  } else {
+    respC.innerHTML = ev.responses.map(r => {
+      const slotStr = r.slot ? ` · ${formatTime(new Date(r.slot))}` : '';
+      return `
+        <div class="response-card">
+          <div class="response-card-left">
+            <div class="avatar ${r.type}">${r.name.charAt(0).toUpperCase()}</div>
+            <div>
+              <div class="response-name">${r.name}</div>
+              <div class="response-status">${r.type === 'accepted' ? 'Available' + slotStr : r.type === 'declined' ? 'Can\'t make it' : 'Countered'}</div>
+            </div>
+          </div>
+          <span class="response-badge badge-${r.type}">${r.type === 'accepted' ? '✓ In' : r.type === 'declined' ? '✗ Out' : '↩ Counter'}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Add demo responses for showcase
+  if (ev.responses.length === 0) addDemoResponses();
+}
+
+function addDemoResponses() {
+  if (!state.event || !state.event.slots || state.event.slots.length === 0) return;
+  const demoResponses = [
+    { name: 'James', type: 'accepted', slotIdx: 0, slot: state.event.slots[0] },
+    { name: 'Isaac', type: 'accepted', slotIdx: state.event.slots.length > 1 ? 1 : 0, slot: state.event.slots[state.event.slots.length > 1 ? 1 : 0] },
+    { name: 'Sofia', type: 'declined', slotIdx: null, slot: null },
+  ];
+  state.event.responses = [...demoResponses];
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════════
+//  CONFIRM MODAL
+// ═══════════════════════════════════════════════
+function openConfirmModal() {
+  if (!state.event) return;
+  const c = document.getElementById('modal-slots');
+  const slots = state.event.slots;
+  c.innerHTML = slots.map((s, i) => `
+    <div class="slot-choice ${state.selectedSlot === i ? 'selected' : ''}" id="modal-slot-${i}" onclick="selectSlotChoice(${i},'modal',${slots.length})">
+      <div class="slot-radio"></div>
+      <div>
+        <div class="slot-time">${formatTime(new Date(s))}</div>
+        <div class="slot-date">${formatDate(new Date(s))}</div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('confirm-overlay').classList.add('active');
+}
+
+function closeConfirmModal(e) {
+  if (!e || e.target === document.getElementById('confirm-overlay')) {
+    document.getElementById('confirm-overlay').classList.remove('active');
+  }
+}
+
+function confirmSlot() {
+  if (state.selectedSlot === null) { showToast('Pick a time slot'); return; }
+  const slot = state.event.slots[state.selectedSlot];
+  const dt = new Date(slot);
+  document.getElementById('hc-sub').textContent = `"${state.event.name}" is confirmed for ${formatDate(dt)} at ${formatTime(dt)} · ${state.event.place}`;
+  document.getElementById('hc-gcal-link').href = buildGCalUrl(state.event, slot);
+  document.getElementById('confirm-overlay').classList.remove('active');
+  goTo('host-confirmed');
+}
+
+// ═══════════════════════════════════════════════
+//  GOOGLE CALENDAR
+// ═══════════════════════════════════════════════
+function buildGCalUrl(event, slot) {
+  const start = new Date(slot);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2hrs default
+  const fmt = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.name,
+    dates: `${fmt(start)}/${fmt(end)}`,
+    details: `Hosted by ${event.host}${event.note ? '\n\n' + event.note : ''}`,
+    location: event.place
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
+}
+
+// ═══════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════
+function formatTime(dt) {
+  return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+function formatDate(dt) {
+  return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════
+//  URL PARSING (for when someone opens a shared link)
+// ═══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  const params = new URLSearchParams(window.location.search);
+  const eventParam = params.get('event');
+  if (eventParam) {
+    try {
+      state.event = JSON.parse(atob(eventParam));
+      state.event.responses = state.event.responses || [];
+
+      // Populate invitee screen
+      document.getElementById('inv-host').textContent = state.event.host;
+      document.getElementById('inv-name').textContent = state.event.name;
+      document.getElementById('inv-place').textContent = state.event.place;
+
+      if (state.event.note) {
+        document.getElementById('inv-note').textContent = state.event.note;
+        document.getElementById('inv-note-wrap').style.display = 'flex';
+      }
+
+      renderSlotChoices('inv-slots', state.event.slots, 'inv');
+      goTo('invitee');
+    } catch(e) {
+      console.error('Invalid event param', e);
+    }
+  }
+
+  // Init slot on create screen
+  initSlots();
+});
+</script>
+</body>
+</html>
